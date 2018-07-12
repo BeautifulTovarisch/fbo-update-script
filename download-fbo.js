@@ -33,7 +33,7 @@ c.on( 'ready', () => {
 		    delimiter: ","
 		});
 
-		const writer = csvWriter( { separator: '\0z' } );
+		const writer = csvWriter( { separator: '\0' } );
 		writer.pipe( fs.createWriteStream( latestRecord.name ) );
 
 		stream.once( 'close', () => c.end() );
