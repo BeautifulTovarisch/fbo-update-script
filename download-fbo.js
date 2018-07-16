@@ -7,8 +7,6 @@ const csvWriter = require( 'csv-write-stream' );
 
 const c = new Client();
 
-const fboFile = "/FBORecovery/FBORecovery20180707.csv";
-
 const options = {
     host: "ftp.fbo.gov"
 };
@@ -33,7 +31,12 @@ c.on( 'ready', () => {
 		    delimiter: ","
 		});
 
-		const writer = csvWriter( { separator: '\0' } );
+		// Verify that each record has a Solicitaton Number
+		csvStream
+		    .validate( data => data["Sol #"] )
+		    .on( "data-invalid", () => "\n" );
+
+		const writer = csvWriter( { separator: '\0', newline: "\0z" } );
 		writer.pipe( fs.createWriteStream( latestRecord.name ) );
 
 		stream.once( 'close', () => c.end() );
