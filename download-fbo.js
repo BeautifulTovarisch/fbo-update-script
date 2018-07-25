@@ -1,9 +1,13 @@
 'use strict';
 
+const path = require( 'path' );
+
 const fs = require( 'fs' );
 const fcsv = require( 'fast-csv' );
 const Client = require( 'ftp' );
 const csvWriter = require( 'csv-write-stream' );
+
+const bulkInsert = require( './database' );
 
 const c = new Client();
 
@@ -43,7 +47,7 @@ c.on( 'ready', () => {
 		stream
 		    .pipe( csvStream )
 		    .pipe( writer )
-		    .on( 'end', () => console.log( "Wrote file", latestRecord.name ) )
+		    .on( 'end', () => bulkInsert( path.resolve( latestRecord.name ) ) )
 		    .on( 'error', err => console.log( err ) );
 
 	    });
