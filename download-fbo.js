@@ -1,13 +1,13 @@
 'use strict';
 
-const path = require( 'path' );
-
 const fs = require( 'fs' );
+const path = require( 'path' );
 const fcsv = require( 'fast-csv' );
 const Client = require( 'ftp' );
 const csvWriter = require( 'csv-write-stream' );
 
-const bulkInsert = require( './database' );
+const parseXML = require( './process-fbo' ).parseXML;
+const parseJSON = require( './process-fbo' ).parseJSON;
 
 const c = new Client();
 
@@ -15,43 +15,40 @@ const options = {
     host: "ftp.fbo.gov"
 };
 
-const maxDate = ( a, b ) => new Date( a.date ) > new Date( b.date ) ? a : b;
+const today = new Date();
+
+today.setDate( today.getDate() - 1 );
+
+const day = today.getDate() < 10 ? `0${today.getDate()}` : today.getDate();
+const month = today.getMonth() < 10 ? `0${today.getMonth() + 1}` : today.getMonth() + 1;
+const year = today.getFullYear();
+
+const dateString = `${year}${month}${day}`;
+
+const fileName = `FBOFeed${dateString}`;
 
 c.on( 'ready', () => {
-    c.cwd( "FBORecovery", ( err, currentDir ) => {
-	c.list( ( err, list ) => {
-	    if( err )
-		throw err;
+    c.get( fileName, ( err, stream ) => {
 
-	    const latestRecord = list.reduce( maxDate );
+	if( err ) {
+	    c.end();
+	    return console.log( err, fileName );
+	}
 
-	    c.get( latestRecord.name, ( err, stream ) => {
-		if( err )
-		    throw err;
+	const writeStream = fs.createWriteStream( path.resolve( __dirname, `data/${fileName}.xml` ) );
 
-		const csvStream = fcsv.parse({
-		    quote: '"',
-		    headers: true,
-		    delimiter: ","
-		});
+	writeStream
+	    .on( 'error', e => console.log( e ) );
 
-		// Verify that each record has a Solicitaton Number
-		csvStream
-		    .validate( data => data["Sol #"] )
-		    .on( "data-invalid", () => "\n" );
 
-		const writer = csvWriter( { separator: '\0', newline: "\0z" } );
-		writer.pipe( fs.createWriteStream( latestRecord.name ) );
-
-		stream.once( 'close', () => c.end() );
-		stream
-		    .pipe( csvStream )
-		    .pipe( writer )
-		    .on( 'end', () => bulkInsert( path.resolve( latestRecord.name ) ) )
-		    .on( 'error', err => console.log( err ) );
-
+	return stream
+	    .pipe( writeStream )
+	    .on( 'error', e => console.log( "Error: ", e ) )
+	    .once( 'close', () => {
+		c.end();
+		parseXML( `data/${fileName}.xml` );
+		parseJSON( `data/${fileName}.json` );
 	    });
-	});
     });
 });
 

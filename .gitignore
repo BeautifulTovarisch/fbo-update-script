@@ -2,3 +2,5 @@ node_modules/
 *.log
 *.csv
 db.config.json
+data/
+*.json
