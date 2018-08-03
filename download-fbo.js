@@ -40,7 +40,6 @@ c.on( 'ready', () => {
 	writeStream
 	    .on( 'error', e => console.log( e ) );
 
-
 	return stream
 	    .pipe( writeStream )
 	    .on( 'error', e => console.log( "Error: ", e ) )

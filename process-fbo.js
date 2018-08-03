@@ -33,6 +33,8 @@ const parseXML = file =>
 
 const parseJSON = file => {
     const writer = csvWriter({
+	newline: "\0z",
+	separator: "\0",
 	headers: [
 	    "DATE",
 	    "YEAR",
@@ -52,7 +54,8 @@ const parseJSON = file => {
 	    "SETASIDE",
 	    "POPCOUNTRY",
 	    "POPZIP",
-	    "POPADDRESS"
+	    "POPADDRESS",
+	    "TYPE"
 	]
     });
 
@@ -60,13 +63,15 @@ const parseJSON = file => {
     const dataStream = fs.createReadStream( file );
     const jsonStream = JSONStream.parse( '*' );
 
-
-
     jsonStream.on( 'data', d => {
 	const type = _.first( _.keys( _.first( d ) ) );
-	const data = d[ 0 ][ type ];
+	const data = _.assign( {}, d[ 0 ][ type ], {
+	    TYPE: type
+	});
 
-	writer.write( data );
+	if( data["SOLNBR"] && data["SOLNBR"].length ) {
+	    writer.write( data );
+	};
 
     });
 
@@ -74,8 +79,6 @@ const parseJSON = file => {
 
     dataStream
 	.pipe( jsonStream );
-	// .pipe( writer )
-	// .pipe( csvStream );
 
 };
 
